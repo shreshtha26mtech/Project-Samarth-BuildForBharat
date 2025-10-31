@@ -65,47 +65,30 @@ def setup_page():
         </style>
         """, unsafe_allow_html=True)
 
-def clean_response(response):
+def clean_response(response: str) -> str:
     """
-    Simple and reliable cleaning function that extracts natural language explanations.
+    Cleans the agent's final string response.
+    - Removes any stray SQL code blocks.
+    - Leaves the citation block (which is plain markdown) intact.
     """
     print("CLEANING RESPONSE:", type(response))
     
-    if response is None:
-        return "No response generated."
-    
-    # Handle list responses - common pattern: [SQL, explanation]
-    if isinstance(response, list):
-        print(f"List with {len(response)} items")
-        
-        # Simple logic: if we have 2 items, the second is usually the explanation
-        if len(response) >= 2:
-            explanation = str(response[1]).strip()
-            print(f"Using second item as explanation: {explanation[:200]}...")
-            return explanation
-        
-        # If only one item, check if it's SQL and handle accordingly
-        elif len(response) == 1:
-            item = str(response[0]).strip()
-            if re.search(r'\b(SELECT|FROM|WHERE)\b', item, re.IGNORECASE):
-                return "Analysis completed. Please check the data sources for detailed information."
-            else:
-                return item
-        
-        else:
-            return "No response content available."
-    
-    # Handle string responses
-    elif isinstance(response, str):
-        # Remove SQL code blocks if present
-        cleaned = re.sub(r'```.*?```', '', response, flags=re.DOTALL)
-        cleaned = cleaned.strip()
-        return cleaned if cleaned else "Analysis completed based on available data."
-    
-    # Fallback
-    else:
-        return str(response) if response else "No response generated."
+    # Ensure we are working with a string
+    if not isinstance(response, str):
+        response = str(response)
 
+    # This regex ONLY removes markdown blocks specifically tagged with "sql"
+    # It will NOT remove your citation block, which doesn't have "sql".
+    cleaned = re.sub(r'```sql.*?```', '', response, flags=re.DOTALL)
+    
+    cleaned = cleaned.strip()
+    
+    # If cleaning results in an empty string, return a user-friendly message.
+    if not cleaned:
+        # This is the line you were seeing. It's a fallback.
+        return "Analysis completed. Please check the data sources for detailed information."
+    
+    return cleaned
 def main():
     setup_page()
     
